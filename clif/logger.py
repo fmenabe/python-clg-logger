@@ -42,27 +42,56 @@ def init(name, logdir, loglevel):
     setattr(sys.modules[__name__], 'logger', logger)
 
 
-def log(msg, loglevel, quit, return_code):
-    getattr(logger, loglevel)(msg)
+def log(msg, loglevel, **kwargs):
+    quit = kwargs.get('quit', False)
+    return_code = kwargs.get('return_code', 0)
+    confidential = kwargs.get('confidential', False)
+    if confidential:
+        logger.handlers[0].setLevel(100)
+        getattr(logger, loglevel)(msg)
+        logger.handlers[0].setLevel('INFO')
+    else:
+        getattr(logger, loglevel)(msg)
+
     if quit:
         sys.exit(return_code)
 
 
-def verbose(msg, quit=False):
-    log(msg, 'verbose', quit, 0)
+def verbose(msg, **kwargs):
+    log(msg,
+        'verbose',
+        quit=kwargs.get('quit', False),
+        return_code=kwargs.get('return_code', 0),
+        confidential=kwargs.get('confidential', False))
 
 
-def debug(msg, quit=False):
-    log(msg, 'debug', quit, 0)
+def debug(msg, **kwargs):
+    log(msg,
+        'debug',
+        quit=kwargs.get('quit', False),
+        return_code=kwargs.get('return_code', 0),
+        confidential=kwargs.get('confidential', False))
 
 
-def info(msg, quit=False):
-    log(msg, 'info', quit, 0)
+def info(msg, **kwargs):
+    log(msg,
+        'info',
+        quit=kwargs.get('quit', False),
+        return_code=kwargs.get('return_code', 0),
+        confidential=kwargs.get('confidential', False))
 
 
-def warn(msg, quit=False):
-    log(msg, 'warn', quit, 0)
+def warn(msg, **kwargs):
+    log(msg,
+        'warn',
+        quit=kwargs.get('quit', False),
+        return_code=kwargs.get('return_code', 0),
+        confidential=kwargs.get('confidential', False))
 
 
-def error(msg, quit=False):
-    log(msg, 'error', quit, 1)
+def error(msg, **kwargs):
+    log(msg,
+        'error',
+        quit=kwargs.get('quit', False),
+        return_code=kwargs.get('return_code', 1),
+        confidential=kwargs.get('confidential', False))
