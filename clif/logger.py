@@ -18,7 +18,7 @@ def init(name, logdir, loglevel):
     if not os.path.exists(logdir):
         try:
             os.makedirs(logdir)
-        except OSError:
+        except OSError as err:
             raise CliError('unable to create log directory: %s' % err)
 
     logger = logging.getLogger(name)
