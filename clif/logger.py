@@ -15,9 +15,10 @@ FORMATTER = logging.Formatter('%(asctime)s %(levelname)s: %(message)s')
 
 
 def init(name, logdir, loglevel):
+    umask = os.umask(0)
     if not os.path.exists(logdir):
         try:
-            os.makedirs(logdir)
+            os.makedirs(logdir, mode=0o770)
         except OSError as err:
             raise CliError('unable to create log directory: %s' % err)
 
@@ -27,10 +28,12 @@ def init(name, logdir, loglevel):
 
     # Add file handler.
     filename =  '%s.log' % datetime.now().strftime('%Y%m%d%H%M')
-    file_handler = logging.FileHandler(os.path.join(logdir, filename))
+    filepath = os.path.join(logdir, filename)
+    file_handler = logging.FileHandler(filepath)
     file_handler.setFormatter(FORMATTER)
     file_handler.setLevel('INFO')
     logger.addHandler(file_handler)
+    os.chmod(filepath, 0o770)
 
     # Add cli handler.
     if loglevel != 'none':
@@ -40,6 +43,7 @@ def init(name, logdir, loglevel):
         logger.addHandler(cli_handler)
 
     setattr(sys.modules[__name__], 'logger', logger)
+    os.umask(umask)
 
 
 def log(msg, loglevel, **kwargs):
