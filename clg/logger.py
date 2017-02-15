@@ -42,7 +42,7 @@ def init(args):
         logfile = os.path.join(logdir, '%s.log' % datetime.now().strftime('%Y%m%d%H%M'))
     else:
         logdir = os.path.join(args.logdir, *commands[:-1])
-        logfile = os.path.join(logdir, commands[-1])
+        logfile = os.path.join(logdir, '%s.log' % commands[-1])
     loglevel = args.loglevel or 'info'
 
     # If directory for storing logs does not exists, create it with group permissions.
