@@ -22,18 +22,17 @@ logging.addLevelName(logging.VERBOSE, 'VERBOSE')
 logging.Logger.verbose = (lambda inst, msg, *args, **kwargs:
                           inst.log(logging.VERBOSE, msg, *args, **kwargs))
 
-FORMATTER = logging.Formatter('%(asctime)s %(levelname)s: %(message)s')
+
+
+# Default format.
+LOGFORMAT = '%(asctime)s %(levelname)s: %(message)s'
+
 
 def init(args):
-    logging.VERBOSE = 5
-    logging.addLevelName(logging.VERBOSE, 'VERBOSE')
-    logging.Logger.verbose = (lambda inst, msg, *args, **kwargs:
-                              inst.log(logging.VERBOSE, msg, *args, **kwargs))
-
-
     logdir = args['logdir'] or os.path.join(sys.path[0], 'logs')
     loglevel = args['loglevel'] or 'info'
     logfile_per_exec = args['logfile_per_exec'] or False
+    formatter = logging.Formatter(args['logformat'] or LOGFORMAT)
 
     # Get log directory and file.
     commands = [value for (arg, value) in sorted(args) if arg.startswith('command')]
@@ -59,14 +58,14 @@ def init(args):
 
     # Add file handler.
     file_handler = handlers.WatchedFileHandler(logfile)
-    file_handler.setFormatter(FORMATTER)
+    file_handler.setFormatter(formatter)
     file_handler.setLevel('INFO')
     logger.addHandler(file_handler)
     os.chmod(logfile, 0o770)
     # Add cli handler.
     if loglevel != 'none':
         cli_handler = logging.StreamHandler()
-        cli_handler.setFormatter(FORMATTER)
+        cli_handler.setFormatter(formatter)
         cli_handler.setLevel(loglevel.upper())
         logger.addHandler(cli_handler)
 
