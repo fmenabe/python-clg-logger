@@ -23,6 +23,13 @@ logging.Logger.verbose = (lambda inst, msg, *args, **kwargs:
                           inst.log(logging.VERBOSE, msg, *args, **kwargs))
 
 
+# For having the real caller (ie: the calling module instead of this module) for
+# some formatter parameters (pathname, filename and lineno), we need to set
+# logging._srcfile, which is used in logging.findCaller function, to the path
+# of this module. We use inspect.getfile as __file__ in python 2.7 return the
+# pyc file instead of the py file!
+import inspect
+logging._srcfile = os.path.normcase(inspect.getfile(inspect.currentframe()))
 
 # Default format.
 LOGFORMAT = '%(asctime)s %(levelname)s: %(message)s'
