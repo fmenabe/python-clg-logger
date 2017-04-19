@@ -25,5 +25,5 @@ setup(
         'Programming Language :: Python :: 3.5',
         'Topic :: Utilities'
     ],
-    py_modules=['clg/logger.py'],
+    py_modules=['clg/logger'],
     install_requires=['clg'])
