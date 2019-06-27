@@ -39,7 +39,7 @@ logging._srcfile = os.path.normcase(inspect.getfile(inspect.currentframe()))
 LOGLEVEL = 'info'
 LOGFORMAT = '%(asctime)s %(levelname)s: %(message)s'
 
-def init(args, **kwargs):
+def init(args, colors=None, **kwargs):
     """Initialize logger from CLI arguments (``args``) or this function parameters
     (``kwargs``). Arguments from the CLI have precedence.
 
@@ -75,7 +75,11 @@ def init(args, **kwargs):
 
     # Console handler
     cli_handler = logging.StreamHandler()
-    cli_handler.setFormatter(logging.Formatter(logformat))
+    if isinstance(colors, dict):
+        import coloredlogs
+        cli_handler.setFormatter(coloredlogs.ColoredFormatter(logformat, **colors))
+    else:
+        cli_handler.setFormatter(logging.Formatter(logformat))
     cli_handler.setLevel(loglevel.upper())
     logger.addHandler(cli_handler)
 
