@@ -1,13 +1,12 @@
 # coding: utf-8
 
-"""Create a logger based on command-line arguments.
+"""
+Create a logger with multiple handlers based on CLI arguments or initialisation
+parameters.
 
-This logger will log to a file with INFO level and to the console with the
-level passed with the 'loglevel' command-line argument. 'logdir' command-line
-argument define where logs will be stored.
-
-There's an additionnal parameter indicating whether a log file will be created
-per execution.
+By default a console handler is set that can be disabled using the *none*
+loglevel. Others options/parameters allows to defined a handler logging to
+a given file or a handler that will log to a file based on the command used.
 """
 
 import os
@@ -22,6 +21,11 @@ logging.addLevelName(logging.VERBOSE, 'VERBOSE')
 logging.Logger.verbose = (lambda inst, msg, *args, **kwargs:
                           inst.log(logging.VERBOSE, msg, *args, **kwargs))
 
+# Dummy log level for disabling logging (ie: logger.none should never be used)
+logging.NONE = 99
+logging.addLevelName(logging.NONE, 'NONE')
+logging.Logger.none = (lambda inst, msg, *args, **kwargs:
+                       inst.log(logging.NONE, msg, *args, **kwargs))
 
 # For having the real caller (ie: the calling module instead of this module) for
 # some formatter parameters (pathname, filename and lineno), we need to set
@@ -31,56 +35,85 @@ logging.Logger.verbose = (lambda inst, msg, *args, **kwargs:
 import inspect
 logging._srcfile = os.path.normcase(inspect.getfile(inspect.currentframe()))
 
-# Default format.
+# Default log level and format.
+LOGLEVEL = 'info'
 LOGFORMAT = '%(asctime)s %(levelname)s: %(message)s'
 
+def init(args, **kwargs):
+    """Initialize logger from CLI arguments (``args``) or this function parameters
+    (``kwargs``). Arguments from the CLI have precedence.
 
-def init(args):
-    logdir = args['logdir'] or os.path.join(sys.path[0], 'logs')
-    loglevel = args['loglevel'] or 'info'
-    logfile_per_exec = args['logfile_per_exec'] or False
-    formatter = logging.Formatter(args['logformat'] or LOGFORMAT)
+    Available options/parameters:
 
-    # Get log directory and file.
+    * ``loglevel``: Log level for the CLI handler (use *none* to disable logging).
+    * ``logformat``: Log format for the CLI handler.
+    * ``logfile``: If defined, a `WatchedFileHandler` handler for the given path will be set.
+    * ``logfile_level``: Log level when a file is defined.
+    * ``logfile_format``: Log level when a file is defined
+    * ``logdir``: Each command will have logs in this directory
+    * ``logdir_per_exec``: Use one log file by execution instead of a global file per command
+    * ``logdir_level``: Log level for log files.
+    * ``logdir_format``: Log format for log files.
+    """
+    # Get parameters from args (clg Namespace) and kwargs
+    loglevel = (args.loglevel or kwargs.pop('loglevel', LOGLEVEL)).upper()
+    logformat = args.logformat or kwargs.pop('logformat', LOGFORMAT)
+    logfile = args.logfile or kwargs.pop('logfile', None)
+    logfile_level = (args.logfile_level or kwargs.pop('logfile_level', LOGLEVEL)).upper()
+    logfile_format = args.logfile_format or kwargs.pop('logfile_format', LOGFORMAT)
+    logdir = args.logdir or kwargs.pop('logdir', None)
+    logdir_per_exec = args.logdir_per_exec or kwargs.pop('logdir_per_exec', False)
+    logdir_level = (args.logdir_level or kwargs.pop('logdir_level', LOGLEVEL)).upper()
+    logdir_format = args.logdir_format or kwargs.pop('logdir_format', LOGFORMAT)
+
+    # Get commands
     commands = [value for (arg, value) in sorted(args) if arg.startswith('command')]
-    if logfile_per_exec:
-        logdir = os.path.join(args.logdir, *commands)
-        logfile = os.path.join(logdir, '%s.log' % datetime.now().strftime('%Y%m%d%H%M'))
-    else:
-        if not commands: # if no subcommands.:
-            filename = os.path.splitext(os.path.basename(sys.argv[0]))[0]
-            logfile = os.path.join(logdir, '%s.log' % filename)
-        else:
-            logdir = os.path.join(logdir, *commands[:-1])
-            logfile = os.path.join(logdir, '%s.log' % commands[-1])
-    loglevel = args.loglevel or 'info'
 
-    # If directory for storing logs does not exists, create it with group permissions.
-    umask = os.umask(0)
-    if not os.path.exists(logdir):
-        try:
-            os.makedirs(logdir, mode=0o770)
-        except OSError as err:
-            raise IOError('unable to create log directory: %s' % err)
-
-    # Initialize logger;
+    # Initialize logger
     logger = logging.getLogger('-'.join(commands))
-    logger.setLevel('VERBOSE') # log level is overloaded by each handlers.
+    logger.setLevel(1) # log level is overloaded by each handlers.
 
-    # Add file handler.
-    file_handler = handlers.WatchedFileHandler(logfile)
-    file_handler.setFormatter(formatter)
-    file_handler.setLevel('INFO')
-    logger.addHandler(file_handler)
-    os.chmod(logfile, 0o770)
-    # Add cli handler.
-    if loglevel != 'none':
-        cli_handler = logging.StreamHandler()
-        cli_handler.setFormatter(formatter)
-        cli_handler.setLevel(loglevel.upper())
-        logger.addHandler(cli_handler)
+    # Console handler
+    cli_handler = logging.StreamHandler()
+    cli_handler.setFormatter(logging.Formatter(logformat))
+    cli_handler.setLevel(loglevel.upper())
+    logger.addHandler(cli_handler)
 
-    os.umask(umask)
+    # File handler
+    if logfile is not None:
+        file_handler = handlers.WatchedFileHandler(logfile)
+        file_handler.setFormatter(logging.Formatter(logfile_format))
+        file_handler.setLevel(logfile_level)
+        logger.addHandler(file_handler)
+
+    # Per command handler
+    if logdir is not None:
+        if not commands:
+            import clg
+            clg.cmd.parser.error(
+                "program has no subcommands and can't use clg-logger logdir configuration!")
+
+        if logdir_per_exec:
+            dirpath = os.path.join(logdir, *commands)
+            filepath = os.path.join(dirpath, '%s.log' % datetime.now().strftime('%Y%m%d%H%M'))
+        else:
+            dirpath = os.path.join(logdir, *commands[:-1])
+            filepath = os.path.join(dirpath, '%s.log' % commands[-1])
+
+        # If directory for storing logs does not exists, create it with group permissions.
+        umask = os.umask(0)
+        if not os.path.exists(dirpath):
+            try:
+                os.makedirs(dirpath, mode=0o770)
+            except OSError as err:
+                raise IOError('unable to create log directory: %s' % err)
+        os.umask(umask)
+
+        cmd_handler = handlers.WatchedFileHandler(filepath)
+        cmd_handler.setFormatter(logging.Formatter(logdir_format))
+        cmd_handler.setLevel(logdir_level)
+        logger.addHandler(cmd_handler)
+
     setattr(sys.modules[__name__], 'logger', logger)
 
 def log(msg, loglevel, **kwargs):
@@ -97,9 +130,13 @@ def log(msg, loglevel, **kwargs):
     return_code = kwargs.get('return_code', 0)
     confidential = kwargs.get('confidential', False)
     if confidential:
-        logger.handlers[0].setLevel(100)
+        handlers_loglevel = {}
+        for handler in logger.handlers[1:]:
+            handlers_loglevel[handler] = handler.level
+            handler.setLevel('NONE')
         getattr(logger, loglevel)(msg)
-        logger.handlers[0].setLevel('INFO')
+        for handler, level in handlers_loglevel.items():
+            handler.setLevel(level)
     else:
         getattr(logger, loglevel)(msg)
 
