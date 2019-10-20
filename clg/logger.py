@@ -149,45 +149,20 @@ def log(msg, loglevel, **kwargs):
 
 def verbose(msg, **kwargs):
     """Verbose messages."""
-    log(
-        msg,
-        'verbose',
-        quit=kwargs.get('quit', False),
-        return_code=kwargs.get('return_code', 0),
-        confidential=kwargs.get('confidential', False))
+    log(msg, 'verbose', **kwargs)
 
 def debug(msg, **kwargs):
     """Debug messages."""
-    log(
-        msg,
-        'debug',
-        quit=kwargs.get('quit', False),
-        return_code=kwargs.get('return_code', 0),
-        confidential=kwargs.get('confidential', False))
+    log(msg, 'debug', **kwargs)
 
 def info(msg, **kwargs):
     """Info messages."""
-    log(
-        msg,
-        'info',
-        quit=kwargs.get('quit', False),
-        return_code=kwargs.get('return_code', 0),
-        confidential=kwargs.get('confidential', False))
+    log(msg, 'info', **kwargs)
 
 def warn(msg, **kwargs):
     """Warning messages."""
-    log(
-        msg,
-        'warn',
-        quit=kwargs.get('quit', False),
-        return_code=kwargs.get('return_code', 0),
-        confidential=kwargs.get('confidential', False))
+    log(msg, 'warn', **kwargs)
 
 def error(msg, **kwargs):
-    """Error message."""
-    log(
-        msg,
-        'error',
-        quit=kwargs.get('quit', False),
-        return_code=kwargs.get('return_code', 1),
-        confidential=kwargs.get('confidential', False))
+    """Error messages."""
+    log(msg, 'error', **kwargs)
