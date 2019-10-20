@@ -166,3 +166,7 @@ def warn(msg, **kwargs):
 def error(msg, **kwargs):
     """Error messages."""
     log(msg, 'error', **kwargs)
+
+def exception(msg, **kwargs):
+    """Exception messages."""
+    log(msg, 'exception', **kwargs)
