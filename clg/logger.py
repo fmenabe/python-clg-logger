@@ -56,15 +56,17 @@ def init(args, colors=None, **kwargs):
     * ``logdir_format``: Log format for log files.
     """
     # Get parameters from args (clg Namespace) and kwargs
-    loglevel = (args.loglevel or kwargs.pop('loglevel', LOGLEVEL)).upper()
-    logformat = args.logformat or kwargs.pop('logformat', LOGFORMAT)
-    logfile = args.logfile or kwargs.pop('logfile', None)
-    logfile_level = (args.logfile_level or kwargs.pop('logfile_level', LOGLEVEL)).upper()
-    logfile_format = args.logfile_format or kwargs.pop('logfile_format', LOGFORMAT)
-    logdir = args.logdir or kwargs.pop('logdir', None)
-    logdir_per_exec = args.logdir_per_exec or kwargs.pop('logdir_per_exec', False)
-    logdir_level = (args.logdir_level or kwargs.pop('logdir_level', LOGLEVEL)).upper()
-    logdir_format = args.logdir_format or kwargs.pop('logdir_format', LOGFORMAT)
+    loglevel = (args._get('loglevel', None) or kwargs.pop('loglevel', LOGLEVEL)).upper()
+    logformat = args._get('logformat', None) or kwargs.pop('logformat', LOGFORMAT)
+    logfile = args._get('logfile', None) or kwargs.pop('logfile', None)
+    logfile_level = ((args._get('logfile_level', None) or kwargs.pop('logfile_level', LOGLEVEL))
+                     .upper())
+    logfile_format = args._get('logfile_format', None) or kwargs.pop('logfile_format', LOGFORMAT)
+    logdir = args._get('logdir', None) or kwargs.pop('logdir', None)
+    logdir_per_exec = args._get('logdir_per_exec', None) or kwargs.pop('logdir_per_exec', False)
+    logdir_level = ((args._get('logdir_level', None) or kwargs.pop('logdir_level', LOGLEVEL))
+                    .upper())
+    logdir_format = args._get('logdir_format', None) or kwargs.pop('logdir_format', LOGFORMAT)
 
     # Get commands
     commands = [value for (arg, value) in sorted(args) if arg.startswith('command')]
