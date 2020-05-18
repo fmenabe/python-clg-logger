@@ -94,7 +94,7 @@ def init(args, colors=None, **kwargs):
 
     # Per command handler
     if logdir is not None:
-        if not commands:
+        if not logdir_per_exec and not commands:
             import clg
             clg.cmd.parser.error(
                 "program has no subcommands and can't use clg-logger logdir configuration!")
