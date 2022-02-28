@@ -169,6 +169,10 @@ def error(msg, **kwargs):
     """Error messages."""
     log(msg, 'error', **kwargs)
 
+def critical(msg, **kwargs):
+    """Error messages."""
+    log(msg, 'critical', **kwargs)
+
 def exception(msg, **kwargs):
     """Exception messages."""
     log(msg, 'exception', **kwargs)
