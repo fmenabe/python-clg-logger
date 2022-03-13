@@ -21,6 +21,12 @@ logging.addLevelName(logging.VERBOSE, 'VERBOSE')
 logging.Logger.verbose = (lambda inst, msg, *args, **kwargs:
                           inst.log(logging.VERBOSE, msg, *args, **kwargs))
 
+# Add a OK level between WARNING and ERROR
+logging.OK = 35
+logging.addLevelName(logging.OK, 'OK')
+logging.Logger.ok = (lambda inst, msg, *args, **kwargs:
+                        inst.log(logging.OK, msg, *args, **kwargs))
+
 # Dummy log level for disabling logging (ie: logger.none should never be used)
 logging.NONE = 99
 logging.addLevelName(logging.NONE, 'NONE')
@@ -164,6 +170,10 @@ def info(msg, **kwargs):
 def warn(msg, **kwargs):
     """Warning messages."""
     log(msg, 'warn', **kwargs)
+
+def ok(msg, **kwargs):
+    """Warning messages."""
+    log(msg, 'ok', **kwargs)
 
 def error(msg, **kwargs):
     """Error messages."""
