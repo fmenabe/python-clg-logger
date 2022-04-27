@@ -45,7 +45,7 @@ logging._srcfile = os.path.normcase(inspect.getfile(inspect.currentframe()))
 LOGLEVEL = 'info'
 LOGFORMAT = '%(asctime)s %(levelname)s: %(message)s'
 
-def init(args, colors=None, **kwargs):
+def init(args, **kwargs):
     """Initialize logger from CLI arguments (``args``) or this function parameters
     (``kwargs``). Arguments from the CLI have precedence.
 
@@ -69,64 +69,88 @@ def init(args, colors=None, **kwargs):
                      .upper())
     logfile_format = args._get('logfile_format', None) or kwargs.pop('logfile_format', LOGFORMAT)
     logdir = args._get('logdir', None) or kwargs.pop('logdir', None)
-    logdir_per_exec = args._get('logdir_per_exec', None) or kwargs.pop('logdir_per_exec', False)
-    logdir_level = ((args._get('logdir_level', None) or kwargs.pop('logdir_level', LOGLEVEL))
-                    .upper())
-    logdir_format = args._get('logdir_format', None) or kwargs.pop('logdir_format', LOGFORMAT)
+    logfile_per_exec = args._get('logdir_per_exec', None) or kwargs.pop('logdir_per_exec', False)
+    colors = kwargs.pop('colors', None)
 
     # Get commands
-    commands = [value for (arg, value) in sorted(args) if arg.startswith('command')]
+    subcommands = [value for (arg, value) in sorted(args) if arg.startswith('command')]
 
     # Initialize logger
-    logger = logging.getLogger('-'.join(commands))
-    logger.setLevel(1) # log level is overloaded by each handlers.
+    loggers = list(getLoggers(kwargs.pop('loggers', []), subcommands))
+    setattr(sys.modules[__name__], 'LOGGERS', kwargs.pop('loggers', []))
 
-    # Console handler
-    cli_handler = logging.StreamHandler()
-    if isinstance(colors, dict):
-        import coloredlogs
-        cli_handler.setFormatter(coloredlogs.ColoredFormatter(logformat, **colors))
-    else:
-        cli_handler.setFormatter(logging.Formatter(logformat))
-    cli_handler.setLevel(loglevel.upper())
-    logger.addHandler(cli_handler)
-
-    # File handler
+    init_loggers()
+    add_cli_handler(loglevel, logformat, colors)
     if logfile is not None:
-        file_handler = handlers.WatchedFileHandler(logfile)
-        file_handler.setFormatter(logging.Formatter(logfile_format))
-        file_handler.setLevel(logfile_level)
-        logger.addHandler(file_handler)
-
-    # Per command handler
+        add_file_handler(logfile_level, logfile, logfile_format)
     if logdir is not None:
-        if not logdir_per_exec and not commands:
-            import clg
-            clg.cmd.parser.error(
-                "program has no subcommands and can't use clg-logger logdir configuration!")
+        add_cmd_handler(subcommands, logdir, logfile_level, logfile_format, logfile_per_exec)
 
-        if logdir_per_exec:
-            dirpath = os.path.join(logdir, *commands)
-            filepath = os.path.join(dirpath, '%s.log' % datetime.now().strftime('%Y%m%d%H%M'))
-        else:
-            dirpath = os.path.join(logdir, *commands[:-1])
-            filepath = os.path.join(dirpath, '%s.log' % commands[-1])
+def getLoggers(loggers, subcommands):
+    yield logging.getLogger('-'.join(subcommands))
 
-        # If directory for storing logs does not exists, create it with group permissions.
-        umask = os.umask(0)
-        if not os.path.exists(dirpath):
-            try:
-                os.makedirs(dirpath, mode=0o770)
-            except OSError as err:
-                raise IOError('unable to create log directory: %s' % err)
-        os.umask(umask)
+    for l in loggers:
+        yield logger.getLogger(l)
 
-        cmd_handler = handlers.WatchedFileHandler(filepath)
-        cmd_handler.setFormatter(logging.Formatter(logdir_format))
-        cmd_handler.setLevel(logdir_level)
-        logger.addHandler(cmd_handler)
+def set_loglevel(loglevel):
+    for l in LOGGERS:
+        for h in l.handlers:
+            h.setLevel(l)
 
-    setattr(sys.modules[__name__], 'logger', logger)
+def init_loggers():
+    set_loglevel(1)
+
+def add_handler(handler):
+    for l in LOGGERS:
+        l.addHandler(handler)
+
+def add_cli_handler(loglevel, logformat, colors):
+    h = logging.StreamHandler()
+    if colors is not None:
+        import coloredlogs
+        f = coloredlogs.ColoredFormatter(logformat, **colors)
+    else:
+        f = logging.Formatter(logformat)
+    h.setFormatter(f)
+    h.setLevel(loglevel.upper())
+    add_handler(h)
+
+def add_file_handler(loglevel, logfile, logformat):
+    h = handlers.WatchedFileHandler(logfile)
+    h.setFormatter(logging.Formatter(logformat))
+    h.setLevel(loglevel)
+    add_handler(h)
+
+def add_cmd_handler(subcommands, logdir, loglevel, logformat, per_exec):
+    if not per_exec and not subcommands:
+        import clg
+        clg.cmd.parser.error(
+            "program has no subcommands and can't use clg-logger logdir configuration!")
+
+    if per_exec:
+        dirpath = os.path.join(logdir, *subcommands)
+        filepath = os.path.join(dirpath, '%s.log' % datetime.now().strftime('%Y%m%d%H%M'))
+    else:
+        dirpath = os.path.join(logdir, *subcommands[:-1])
+        filepath = os.path.join(dirpath, '%s.log' % subcommands[-1])
+
+    # If directory for storing logs does not exists, create it with group permissions.
+    umask = os.umask(0)
+    if not os.path.exists(dirpath):
+        try:
+            os.makedirs(dirpath, mode=0o770)
+        except OSError as err:
+            raise IOError('unable to create log directory: %s' % err)
+    os.umask(umask)
+
+    h = handlers.WatchedFileHandler(filepath)
+    h.setFormatter(logging.Formatter(logformat))
+    h.setLevel(loglevel)
+    add_handler(h)
+
+def dispatch(loglevel, msg):
+    for l in LOGGERS:
+        getattr(l)(loglevel)(msg)
 
 def log(msg, loglevel, **kwargs):
     """Log ``msg`` message with ``loglevel`` verbosity.
@@ -141,16 +165,18 @@ def log(msg, loglevel, **kwargs):
     quit = kwargs.get('quit', False)
     return_code = kwargs.get('return_code', 0)
     confidential = kwargs.get('confidential', False)
+    stack = kwargs.get('stack', False)
     if confidential:
-        handlers_loglevel = {}
-        for handler in logger.handlers[1:]:
-            handlers_loglevel[handler] = handler.level
-            handler.setLevel('NONE')
-        getattr(logger, loglevel)(msg)
-        for handler, level in handlers_loglevel.items():
-            handler.setLevel(level)
+        cur_loglevel = _loggers[0].handlers[0].level
+        set_loglevel(logging.NONE)
+        dispatch(loglevel, msg)
+        set_loglevel(cur_loglevel)
     else:
-        getattr(logger, loglevel)(msg)
+        dispatch(loglevel, msg)
+
+    if stack:
+        import traceback
+        traceback.print_exc()
 
     if quit:
         sys.exit(return_code)
