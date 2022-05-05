@@ -177,12 +177,18 @@ def ok(msg, **kwargs):
 
 def error(msg, **kwargs):
     """Error messages."""
+    kwargs['quit'] = kwargs.get('quit', True)
+    kwargs['return_code'] = kwargs.get('return_code', 1)
     log(msg, 'error', **kwargs)
 
 def critical(msg, **kwargs):
     """Error messages."""
+    kwargs['quit'] = kwargs.get('quit', True)
+    kwargs['return_code'] = kwargs.get('return_code', 1)
     log(msg, 'critical', **kwargs)
 
 def exception(msg, **kwargs):
     """Exception messages."""
+    kwargs['quit'] = kwargs.get('quit', True)
+    kwargs['return_code'] = kwargs.get('return_code', 1)
     log(msg, 'exception', **kwargs)
