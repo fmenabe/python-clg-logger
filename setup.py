@@ -4,10 +4,10 @@ from setuptools import setup
 
 setup(
     name='clg-logger',
-    version='0.1.0',
+    version='1.0.0',
     author='François Ménabé',
     author_email='francois.menabe@gmail.com',
-    url = 'https://clg.readthedocs.org/en/latest/',
+    url = 'http://github.com/fmenabe/python-clg-logger',
     download_url = 'http://github.com/fmenabe/python-clg-logger',
     license='MIT License',
     description='Manage logging based on command-line options.',
